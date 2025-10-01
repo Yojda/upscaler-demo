@@ -5,7 +5,11 @@ find_package(OpenGL REQUIRED)
 
 set(CMAKE_CXX_STANDARD 23)
 
-add_executable(upscaler src/main.cpp)
+add_executable(upscaler
+        src/main.cpp
+        src/glad.c
+        src/triangle_mesh.cpp
+)
 
 target_include_directories(upscaler PRIVATE dependencies/include)
 
