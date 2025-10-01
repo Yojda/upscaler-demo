@@ -9,6 +9,7 @@ add_executable(upscaler
         src/main.cpp
         src/glad.c
         src/triangle_mesh.cpp
+        src/Shader.cpp
 )
 
 target_include_directories(upscaler PRIVATE dependencies/include)

@@ -1,110 +1,84 @@
 #include "config.h"
-#include "triangle_mesh.h"
 
-unsigned int make_module(const std::string& filepath, unsigned int module_type);
-
-unsigned int make_shader(const std::string& vertex_filepath, const std::string& fragment_filepath);
+const unsigned int SCR_WIDTH = 800;
+const unsigned int SCR_HEIGHT = 600;
 
 int main() {
+    glfwInit();
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    std::ifstream file;
-    std::string line;
-
-    file.open("../src/shaders/vertex.txt");
-    while (std::getline(file, line)) {
-        std::cout << line << std::endl;
-    }
-
-    GLFWwindow* window;
-
-    if (!glfwInit()) {
-        std::cout << "GLFW couldn't start" << std::endl;
-        return -1;
-    }
-
-    window = glfwCreateWindow(640, 480, "My Window", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "FSR Demo", nullptr, nullptr);
+    if (!window) { std::cout << "Failed to create GLFW window\n"; glfwTerminate(); return -1; }
     glfwMakeContextCurrent(window);
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) { std::cout << "Failed to initialize GLAD\n"; return -1; }
 
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-        std::cout << "GLAD couldn't start" << std::endl;
-        glfwTerminate();
-        return -1;
+    // Quad setup
+    float quadVertices[] = {
+        -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+        -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+         1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+
+        -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+         1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+         1.0f,  1.0f, 0.0f, 1.0f, 1.0f
+    };
+    unsigned int VAO, VBO;
+    glGenVertexArrays(1, &VAO); glGenBuffers(1, &VBO);
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    Shader shader("shaders/vertex.txt", "shaders/fragment.txt");
+
+    // Load texture
+    int width, height, nrChannels;
+    stbi_set_flip_vertically_on_load(true);
+    unsigned char *data = stbi_load("assets/low_res_image.png", &width, &height, &nrChannels, 0);
+    unsigned int texture;
+    glGenTextures(1, &texture);
+
+    if (!data) {
+        std::cout << "Failed to load texture!" << std::endl;
+    } else {
+        GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
+
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format,
+                     GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        stbi_image_free(data);
     }
 
-    glClearColor(0.25f, 0.5f, 0.75f, 1.0f);
-
-    TriangleMesh* triangle = new TriangleMesh();
-
-    unsigned int shader = make_shader(
-        "../src/shaders/vertex.txt",
-        "../src/shaders/fragment.txt"
-    );
+    shader.use();
+    shader.setInt("uTexture", 0);
 
     while (!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
-
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-        glUseProgram(shader);
-        triangle->draw();
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture);
+
+        shader.use();
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
         glfwSwapBuffers(window);
+        glfwPollEvents();
     }
 
-    glDeleteProgram(shader);
     glfwTerminate();
     return 0;
-}
-
-unsigned int make_shader(const std::string& vertex_filepath, const std::string& fragment_filepath) {
-    std::vector<unsigned int> modules;
-    modules.push_back(make_module(vertex_filepath, GL_VERTEX_SHADER));
-    modules.push_back(make_module(fragment_filepath, GL_FRAGMENT_SHADER));
-
-    unsigned int shader = glCreateProgram();
-    for (unsigned int module : modules) {
-        glAttachShader(shader, module);
-    }
-    glLinkProgram(shader);
-
-    int success;
-    glGetProgramiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        char errorLog[1024];
-        glGetProgramInfoLog(shader, 1024, NULL, errorLog);
-        std::cout << "Shader linking failed: " << errorLog << std::endl;
-    }
-
-    for (unsigned int module : modules) {
-        glDeleteShader(shader);
-    }
-
-    return shader;
-}
-
-unsigned int make_module(const std::string& filepath, unsigned int module_type) {
-    std::ifstream file;
-    std::stringstream bufferedLines;
-    std::string line;
-
-    file.open(filepath);
-    while (std::getline(file, line)) {
-        bufferedLines << line << std::endl;
-    }
-    std::string shaderSource = bufferedLines.str();
-    const char* shaderCode = shaderSource.c_str();
-    bufferedLines.str("");
-    file.close();
-
-    unsigned int shaderModule = glCreateShader(module_type);
-    glShaderSource(shaderModule, 1, &shaderCode, NULL);
-    glCompileShader(shaderModule);
-
-    int success;
-    glGetShaderiv(shaderModule, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        char errorLog[1024];
-        glGetShaderInfoLog(shaderModule, 1024, NULL, errorLog);
-        std::cout << "Shader compilation failed: " << errorLog << std::endl;
-    }
-
-    return shaderModule;
 }
