@@ -1,0 +1,23 @@
+#version 330 core
+in vec2 TexCoord;
+out vec4 FragColor;
+
+uniform sampler2D uTexture;  // input upscaled texture
+uniform float uSharpness;     // sharpening strength, e.g., 0.2-1.0
+
+void main() {
+    vec2 texelSize = 1.0 / vec2(textureSize(uTexture, 0)); // size of one texel
+
+    vec3 color = texture(uTexture, TexCoord).rgb;
+
+    // Simple Laplacian sharpening kernel
+    vec3 north = texture(uTexture, TexCoord + vec2(0.0, texelSize.y)).rgb;
+    vec3 south = texture(uTexture, TexCoord - vec2(0.0, texelSize.y)).rgb;
+    vec3 east  = texture(uTexture, TexCoord + vec2(texelSize.x, 0.0)).rgb;
+    vec3 west  = texture(uTexture, TexCoord - vec2(texelSize.x, 0.0)).rgb;
+
+    vec3 laplacian = north + south + east + west - 4.0 * color;
+    vec3 sharpened = color - uSharpness * laplacian;
+
+    FragColor = vec4(clamp(sharpened, 0.0, 1.0), 1.0);
+}
