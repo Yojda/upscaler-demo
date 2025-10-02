@@ -37,6 +37,8 @@ int main() {
 
     Shader shader("shaders/vertex.txt", "shaders/fragment_upscale.txt");
     Shader sharpenShader("shaders/vertex.txt", "shaders/fragment_sharpen.txt");
+    Shader easuShader("shaders/vertex.txt", "shaders/fragment_easu.txt");
+    Shader rcasShader("shaders/vertex.txt", "shaders/fragment_rcas.txt");
 
     // Load texture
     int width, height, nrChannels;
@@ -105,54 +107,105 @@ int main() {
 
 
     while (!glfwWindowShouldClose(window)) {
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    // Input
+    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) { mode = 0; std::cout << "Mode 0\n"; }
+    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) { mode = 1; std::cout << "Mode 1\n"; }
+    if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) { mode = 2; std::cout << "Mode 2\n"; }
+    if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS) { mode = 3; std::cout << "Mode 3 (EASU + RCAS)\n"; }
+
+    // Clear screen
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glActiveTexture(GL_TEXTURE0);
+
+    if (mode == 0) {
+        // Nearest
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+        shader.use();
+        glUniform1i(glGetUniformLocation(shader.ID, "uMode"), mode);
+        glUniform2f(glGetUniformLocation(shader.ID, "uTexSize"), (float)width, (float)height);
+
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    } else if (mode == 1) {
+        // Bilinear
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        shader.use();
+        glUniform1i(glGetUniformLocation(shader.ID, "uMode"), mode);
+        glUniform2f(glGetUniformLocation(shader.ID, "uTexSize"), (float)width, (float)height);
+
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    } else if (mode == 2) {
+        // Bilinear + sharpen (multi-pass)
+        // Pass 1: Render bilinear -> FBO
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glActiveTexture(GL_TEXTURE0);
+        shader.use();
+        glUniform1i(glGetUniformLocation(shader.ID, "uMode"), 1); // bilinear
+        glUniform2f(glGetUniformLocation(shader.ID, "uTexSize"), (float)width, (float)height);
+
         glBindTexture(GL_TEXTURE_2D, texture);
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
 
-        if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) { mode = 0; std::cout << "Mode 0\n"; }
-        if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) { mode = 1; std::cout << "Mode 1\n"; }
-        if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) { mode = 2; std::cout << "Mode 2\n"; }
+        // Pass 2: Render sharpen -> screen
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+        glClear(GL_COLOR_BUFFER_BIT);
 
-        if (mode == 0) { // nearest
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        } else { // bilinear / sharpen
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        }
+        sharpenShader.use();
+        glBindTexture(GL_TEXTURE_2D, fboTexture);
+        glUniform1f(glGetUniformLocation(sharpenShader.ID, "uSharpness"), 0.2f);
 
-        if (mode == 0 || mode == 1) {
-            shader.use();
-            glUniform1i(glGetUniformLocation(shader.ID, "uMode"), mode);
-            glUniform2f(glGetUniformLocation(shader.ID, "uTexSize"), (float)width, (float)height);
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
 
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, texture);
+    } else if (mode == 3) {
+        // EASU + RCAS (placeholders for AMD FSR)
+        // Pass 1: EASU upscaling
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+        glClear(GL_COLOR_BUFFER_BIT);
 
-            glBindVertexArray(VAO);
-            glDrawArrays(GL_TRIANGLES, 0, 6);
-        } else if (mode == 2) {
-            // Multi-pass: bilinear -> FBO -> sharpen -> screen
-            glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-            glClear(GL_COLOR_BUFFER_BIT);
-            shader.use(); // bilinear
-            glBindTexture(GL_TEXTURE_2D, texture);
-            glBindVertexArray(VAO);
-            glDrawArrays(GL_TRIANGLES, 0, 6);
+        easuShader.use(); // <-- You need to implement/load EASU shader
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glUniform2f(glGetUniformLocation(easuShader.ID, "uInputSize"), (float)width, (float)height);
+        glUniform2f(glGetUniformLocation(easuShader.ID, "uOutputSize"), (float)SCR_WIDTH, (float)SCR_HEIGHT);
 
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            glClear(GL_COLOR_BUFFER_BIT);
-            sharpenShader.use();
-            glBindTexture(GL_TEXTURE_2D, fboTexture);
-            glBindVertexArray(VAO);
-            glDrawArrays(GL_TRIANGLES, 0, 6);
-        }
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
 
-        glfwSwapBuffers(window);
-        glfwPollEvents();
+        // Pass 2: RCAS sharpening
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        rcasShader.use(); // <-- You need to implement/load RCAS shader
+        glBindTexture(GL_TEXTURE_2D, fboTexture);
+        glUniform1f(glGetUniformLocation(rcasShader.ID, "uSharpness"), 0.2f);
+
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
     }
+
+    glfwSwapBuffers(window);
+    glfwPollEvents();
+}
+
 
     glfwTerminate();
     return 0;
