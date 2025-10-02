@@ -1,0 +1,45 @@
+#version 330 core
+in vec2 TexCoord;
+out vec4 FragColor;
+
+uniform sampler2D uTexture;  // bound to texture unit 0
+uniform int uMode;           // 0 = nearest, 1 = manual bilinear
+uniform vec2 uTexSize;       // source texture size in pixels (width, height)
+
+vec4 sampleNearest(vec2 uv) {
+    return texture(uTexture, uv);
+}
+
+vec4 sampleBilinear(vec2 uv) {
+    // map uv [0,1] to texel space (0..w-1, 0..h-1)
+    vec2 texelPos = uv * uTexSize - 0.5; // -0.5 to sample texel centers
+    vec2 iPos = floor(texelPos);
+    vec2 f = fract(texelPos);
+
+    // texel center coordinates normalized back to [0,1]
+    vec2 texel00 = (iPos + vec2(0.0, 0.0) + 0.5) / uTexSize;
+    vec2 texel10 = (iPos + vec2(1.0, 0.0) + 0.5) / uTexSize;
+    vec2 texel01 = (iPos + vec2(0.0, 1.0) + 0.5) / uTexSize;
+    vec2 texel11 = (iPos + vec2(1.0, 1.0) + 0.5) / uTexSize;
+
+    vec4 c00 = texture(uTexture, texel00);
+    vec4 c10 = texture(uTexture, texel10);
+    vec4 c01 = texture(uTexture, texel01);
+    vec4 c11 = texture(uTexture, texel11);
+
+    // linear interpolate
+    vec4 cx0 = mix(c00, c10, f.x);
+    vec4 cx1 = mix(c01, c11, f.x);
+    return mix(cx0, cx1, f.y);
+}
+
+void main() {
+    if (uMode == 0) {
+        FragColor = sampleNearest(TexCoord);
+    } else if (uMode == 1) {
+        FragColor = sampleBilinear(TexCoord);
+    } else {
+        // fallback - sample texture directly
+        FragColor = texture(uTexture, TexCoord);
+    }
+}

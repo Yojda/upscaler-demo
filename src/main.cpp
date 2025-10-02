@@ -4,6 +4,7 @@ const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
 int main() {
+    int mode = 1; // default to bilinear (0 = nearest, 1 = bilinear)
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -34,7 +35,7 @@ int main() {
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
-    Shader shader("shaders/vertex.txt", "shaders/fragment.txt");
+    Shader shader("shaders/vertex.txt", "shaders/fragment_upscale.txt");
 
     // Load texture
     int width, height, nrChannels;
@@ -51,8 +52,8 @@ int main() {
         glBindTexture(GL_TEXTURE_2D, texture);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format,
                      GL_UNSIGNED_BYTE, data);
@@ -64,6 +65,18 @@ int main() {
     shader.use();
     shader.setInt("uTexture", 0);
 
+    // set the texture size uniform (make sure shader is in use)
+    GLint locTexSize = glGetUniformLocation(shader.ID, "uTexSize");
+    if (locTexSize >= 0) {
+        glUniform2f(locTexSize, (float)width, (float)height);
+    }
+
+    // set initial mode
+    GLint locMode = glGetUniformLocation(shader.ID, "uMode");
+    if (locMode >= 0) {
+        glUniform1i(locMode, mode);
+    }
+
     while (!glfwWindowShouldClose(window)) {
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -71,7 +84,11 @@ int main() {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture);
 
+        if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) mode = 0; // nearest
+        if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) mode = 1; // bilinear
+
         shader.use();
+        glUniform1i(glGetUniformLocation(shader.ID, "uMode"), mode);
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
