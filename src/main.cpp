@@ -4,6 +4,7 @@
 #include <GLFW/glfw3.h>
 #include <stb_image/std_image.h>
 #include <iostream>
+#include <chrono>
 
 // ImGui
 #include <imgui/imgui.h>
@@ -95,16 +96,24 @@ int main() {
 
     // ----------------- Main Loop -----------------
     int mode = 1; // default: bilinear
-    float lastFrame = 0.0f, deltaTime = 0.0f;
+    float fps = 0.0f;
     while(!glfwWindowShouldClose(window)){
         // Poll events
         glfwPollEvents();
 
         // ----------------- FPS -----------------
-        float currentFrame = glfwGetTime();
-        deltaTime = currentFrame - lastFrame;
-        lastFrame = currentFrame;
-        float fps = 1.0f/deltaTime;
+        auto start = std::chrono::high_resolution_clock::now();
+
+        switch(mode) {
+            case 0: /* nearest */ break;
+            case 1: /* bilinear */ break;
+            case 2: /* bilinear + sharpen */ break;
+            case 3: /* EASU + RCAS */ break;
+        }
+
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<float> duration = end - start;
+        fps = 1.0f / duration.count();
 
         // ----------------- ImGui Frame -----------------
         ImGui_ImplOpenGL3_NewFrame();
