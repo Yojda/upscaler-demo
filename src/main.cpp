@@ -10,8 +10,8 @@
 
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
-const unsigned int FBO_WIDTH = 200;
-const unsigned int FBO_HEIGHT = 150;
+const unsigned int FBO_WIDTH = 300;
+const unsigned int FBO_HEIGHT = 200;
 
 int main() {
     glfwInit();
@@ -187,7 +187,7 @@ int main() {
         glBindTexture(GL_TEXTURE_2D, cubeTexture);
 
         // Make cube fill screen more
-        glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(2.0f));
+        glm::mat4 model = glm::scale(glm::rotate(glm::mat4(1.0f), (float)glfwGetTime()/10, glm::vec3(0,1,0)), glm::vec3(2.0f));
         glm::mat4 view = glm::lookAt(glm::vec3(0, 0, 8.0f), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
         glm::mat4 projection = glm::perspective(glm::radians(45.0f),
                                                 FBO_WIDTH / (float)FBO_HEIGHT, 0.1f, 100.0f);
