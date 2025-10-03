@@ -19,6 +19,7 @@ set(SOURCES
         dependencies/include/imgui/imgui_tables.cpp
         dependencies/include/imgui/backends/imgui_impl_glfw.cpp
         dependencies/include/imgui/backends/imgui_impl_opengl3.cpp
+        src/Renderer.cpp
 )
 
 add_executable(upscaler ${SOURCES})
