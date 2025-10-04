@@ -10,8 +10,8 @@
 
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
-const unsigned int FBO_WIDTH = 300;
-const unsigned int FBO_HEIGHT = 200;
+const unsigned int FBO_WIDTH = 200;
+const unsigned int FBO_HEIGHT = 150;
 
 int main() {
     glfwInit();
@@ -173,75 +173,112 @@ int main() {
         }
 
         // ---------------------------
-        // 2️⃣ Render cube to low-res FBO
+        // 2️⃣ Render cube to low-res FBO (only if mode != 4)
         // ---------------------------
-        glBindFramebuffer(GL_FRAMEBUFFER, renderer.fbo);
-        glEnable(GL_DEPTH_TEST);
-        glViewport(0, 0, FBO_WIDTH, FBO_HEIGHT);
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        // ---------------------------
+        // 2️⃣ Render cube to low-res FBO (only if not native mode)
+        // ---------------------------
+        if (mode != 4) {
+            glBindFramebuffer(GL_FRAMEBUFFER, renderer.fbo);
+            glEnable(GL_DEPTH_TEST);
+            glViewport(0, 0, FBO_WIDTH, FBO_HEIGHT);
+            glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        sceneShader.use();
-        sceneShader.setInt("uTexture", 0);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, cubeTexture);
+            sceneShader.use();
+            sceneShader.setInt("uTexture", 0);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, cubeTexture);
 
-        // Make cube fill screen more
-        glm::mat4 model = glm::scale(glm::rotate(glm::mat4(1.0f), (float)glfwGetTime()/10, glm::vec3(0,1,0)), glm::vec3(2.0f));
-        glm::mat4 view = glm::lookAt(glm::vec3(0, 0, 8.0f), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
-        glm::mat4 projection = glm::perspective(glm::radians(45.0f),
-                                                FBO_WIDTH / (float)FBO_HEIGHT, 0.1f, 100.0f);
-        sceneShader.setMat4("model", model);
-        sceneShader.setMat4("view", view);
-        sceneShader.setMat4("projection", projection);
+            glm::mat4 model = glm::scale(glm::rotate(glm::mat4(1.0f),
+                                                     (float) glfwGetTime() / 10,
+                                                     glm::vec3(0, 1, 0)),
+                                         glm::vec3(2.0f));
+            glm::mat4 view = glm::lookAt(glm::vec3(0, 0, 4.0f),
+                                         glm::vec3(0, 0, 0),
+                                         glm::vec3(0, 1, 0));
+            glm::mat4 projection = glm::perspective(glm::radians(45.0f),
+                                                    FBO_WIDTH / (float) FBO_HEIGHT,
+                                                    0.1f, 100.0f);
 
+            sceneShader.setMat4("model", model);
+            sceneShader.setMat4("view", view);
+            sceneShader.setMat4("projection", projection);
 
-        glBindVertexArray(cubeVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-        glBindVertexArray(0);
+            glBindVertexArray(cubeVAO);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+            glBindVertexArray(0);
 
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
 
         // ---------------------------
-        // 3️⃣ Render fullscreen quad with upscaling
+        // 3️⃣ Render fullscreen quad OR native cube
         // ---------------------------
         glDisable(GL_DEPTH_TEST);
         glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glActiveTexture(GL_TEXTURE0);
+        if (mode == 4) {
+            // Native render
+            glEnable(GL_DEPTH_TEST);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        switch(mode){
-            case 0: // Nearest
-                nearestShader.use();
-                glBindTexture(GL_TEXTURE_2D, renderer.fboTextureLinear);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-                break;
+            sceneShader.use();
+            sceneShader.setInt("uTexture", 0);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, cubeTexture);
 
-            case 1: // Bilinear
-                bilinearShader.use();
-                glBindTexture(GL_TEXTURE_2D, renderer.fboTextureLinear);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                break;
+            glm::mat4 model = glm::scale(glm::rotate(glm::mat4(1.0f),
+                                                     (float) glfwGetTime() / 10,
+                                                     glm::vec3(0, 1, 0)),
+                                         glm::vec3(2.0f));
+            glm::mat4 view = glm::lookAt(glm::vec3(0, 0, 4.0f),
+                                         glm::vec3(0, 0, 0),
+                                         glm::vec3(0, 1, 0));
+            glm::mat4 projection = glm::perspective(glm::radians(45.0f),
+                                                    SCR_WIDTH / (float) SCR_HEIGHT,
+                                                    0.1f, 100.0f);
 
-            case 2: // Sharpen
-                sharpenShader.use();
-                glBindTexture(GL_TEXTURE_2D, renderer.fboTextureLinear);
-                sharpenShader.setFloat("uSharpness", 0.5f);
-                break;
+            sceneShader.setMat4("model", model);
+            sceneShader.setMat4("view", view);
+            sceneShader.setMat4("projection", projection);
 
-            case 3:
-                easuShader.use();
-                glBindTexture(GL_TEXTURE_2D, renderer.fboTextureLinear);
-                easuShader.setVec2("uTexSize", glm::vec2(FBO_WIDTH, FBO_HEIGHT));
-                easuShader.setVec2("uScreenSize", glm::vec2(SCR_WIDTH, SCR_HEIGHT));
-                easuShader.setFloat("uSharpness", 0.2f);
-                break;
+            glBindVertexArray(cubeVAO);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+            glBindVertexArray(0);
+        } else {
+            // Upscaled FBO
+            switch (mode) {
+                case 0: nearestShader.use();
+                    glBindTexture(GL_TEXTURE_2D, renderer.fboTextureLinear);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+                    break;
+                case 1: bilinearShader.use();
+                    glBindTexture(GL_TEXTURE_2D, renderer.fboTextureLinear);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                    break;
+                case 2: sharpenShader.use();
+                    glBindTexture(GL_TEXTURE_2D, renderer.fboTextureLinear);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                    sharpenShader.setFloat("uSharpness", 0.5f);
+                    break;
+                case 3: easuShader.use();
+                    glBindTexture(GL_TEXTURE_2D, renderer.fboTextureLinear);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                    easuShader.setVec2("uTexSize", glm::vec2(FBO_WIDTH, FBO_HEIGHT));
+                    easuShader.setVec2("uScreenSize", glm::vec2(SCR_WIDTH, SCR_HEIGHT));
+                    easuShader.setFloat("uSharpness", 0.2f);
+                    break;
+            }
+            renderer.renderQuad();
         }
 
-        renderer.renderQuad();
+
         glEnable(GL_DEPTH_TEST);
 
         // ---------------------------
@@ -259,6 +296,7 @@ int main() {
         if (ImGui::Button("Bilinear")) mode = 1;
         if (ImGui::Button("Sharpen")) mode = 2;
         if (ImGui::Button("EASU+RCAS")) mode = 3;
+        if (ImGui::Button("Native High-Res")) mode = 4;
         ImGui::End();
 
         ImGui::Render();
