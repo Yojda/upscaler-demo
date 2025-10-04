@@ -1,0 +1,40 @@
+#version 330 core
+out vec4 FragColor;
+in vec2 TexCoord;
+
+uniform sampler2D uTexture;
+uniform vec2 uTexSize;    // size of FBO
+uniform vec2 uScreenSize; // size of window
+uniform float uSharpness; // 0.0 = no sharpen, 1.0 = strong
+
+void main()
+{
+    // -------------------------
+    // Step 1: Map to FBO texel
+    // -------------------------
+    vec2 uv = TexCoord;
+
+    // -------------------------
+    // Step 2: Bilinear upsample
+    // -------------------------
+    vec3 color = texture(uTexture, uv).rgb;
+
+    // -------------------------
+    // Step 3: RCAS-like sharpen
+    // -------------------------
+    vec2 texel = 1.0 / uTexSize;
+
+    vec3 n = texture(uTexture, uv + vec2(0.0, texel.y)).rgb;
+    vec3 s = texture(uTexture, uv - vec2(0.0, texel.y)).rgb;
+    vec3 e = texture(uTexture, uv + vec2(texel.x, 0.0)).rgb;
+    vec3 w = texture(uTexture, uv - vec2(texel.x, 0.0)).rgb;
+
+    vec3 lap = (n + s + e + w - 4.0 * color);
+
+    // Clamp Laplacian to avoid over-sharpening (simple edge-aware mimic)
+    lap = clamp(lap, -0.5, 0.5);
+
+    vec3 finalColor = color - uSharpness * lap;
+
+    FragColor = vec4(finalColor, 1.0);
+}
