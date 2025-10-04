@@ -10,8 +10,8 @@
 
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
-const unsigned int FBO_WIDTH = 200;
-const unsigned int FBO_HEIGHT = 150;
+const unsigned int FBO_WIDTH = 400;
+const unsigned int FBO_HEIGHT = 300;
 
 int main() {
     glfwInit();
