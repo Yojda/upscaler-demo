@@ -71,8 +71,8 @@ Requirements:
 Steps:
 
 ```bash
-git clone https://github.com/Yojda/UpscalingDemo.git
-cd UpscalingDemo
+git clone https://github.com/Yojda/upscaler-demo.git
+cd upscaler-demo
 mkdir build && cd build
 cmake ..
 make
@@ -80,7 +80,7 @@ make
 
 Run the demo:
 ```bash
-./UpscalingDemo
+./upscaler-demo
 ```
 
 ---
