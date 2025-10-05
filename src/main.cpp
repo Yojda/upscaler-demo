@@ -27,6 +27,17 @@ int main() {
         return -1;
     }
 
+    // Query OpenGL version
+    const GLubyte* version = glGetString(GL_VERSION);
+    const GLubyte* renderer_ = glGetString(GL_RENDERER);
+    const GLubyte* vendor   = glGetString(GL_VENDOR);
+    const GLubyte* glslVersion = glGetString(GL_SHADING_LANGUAGE_VERSION);
+
+    std::cout << "OpenGL Version: " << version << std::endl;
+    std::cout << "GLSL Version: " << glslVersion << std::endl;
+    std::cout << "Renderer: " << renderer_ << std::endl;
+    std::cout << "Vendor: " << vendor << std::endl;
+
     glEnable(GL_DEPTH_TEST);
 
     // Setup ImGui
