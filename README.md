@@ -6,7 +6,7 @@
 <h3 align="center">Real-time 3D Upscaling Demo</h3>
 
 <p align="center">
-  Real-time upscaling demo using C++ and OpenGL.
+  Real-time upscaling demo using C++ and OpenGL
   <br>
   <br>
 </p>
@@ -47,7 +47,7 @@ The project includes a small demo app (textured cube + ImGui controls).
 ## 📂 Folder Structure
 
 ```
-UpscalingDemo/
+upscaler-demo/
 ├── dependencies/                   # Project dependencies (e.g., third-party libraries)
 │   ├── include/                       
 │   └── lib/               
